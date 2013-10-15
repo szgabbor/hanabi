@@ -93,6 +93,7 @@ class Player:
             print(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
         else:
+            print(str(current + 1) + ' dob')
             if self.knownCards > 0:
                 self.throwKnownCard(deck, table)
             else:
@@ -106,15 +107,22 @@ class Player:
                 players[i].help()
                 
     def throwKnownCard(self, deck, table):
+        num = -1
+        for i in range(self.knownCards):
+            if self.cards[i].number != 4 and self.cards[i].number > num :
+                num = self.cards[i].number
+        if num == -1 :
+            self.throwCard(deck, table, randint(0, self.knownCards - 1))
+        else:
+            self.throwCard(deck, table, num)
         self.knownCards -= 1
-        self.throwCard(deck, table, randint(0, self.knownCards - 1))
         
     def throwNotKnownCard(self, deck, table):
         self.throwCard(deck, table, randint(self.knownCards, self.numCards - 1))
         
     def throwThrowableCard(self, deck, table, num):
-        self.knownCards -= 1
         self.throwCard(deck, table, num)
+        self.knownCards -= 1
 
     def existNotKnownImportantCard(self, table, players, current, numPlayers):
         min = 5
@@ -147,9 +155,9 @@ class Player:
 
                   
     def putCard(self, deck, table, num):
-        self.knownCards -= 1
         table.putCard(self.cards[num])
         self.loseCard(deck, num)
+        self.knownCards -= 1
     
     def throwCard(self, deck, table, num):
         table.helps += 1
