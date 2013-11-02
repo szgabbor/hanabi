@@ -3,27 +3,57 @@
 
 import sys
 from random import randint
+import argparse
 
 def main(argv = None):
-    deck = Deck()
-    table = Table()
-    players = []
-    numPlayers = 5
-    numCards = 4
-    current = 0
-    for _ in range(numPlayers):
-        players.append(Player(numCards, deck.getHand(numCards)))
 
-    remainingMoves = numPlayers
-    while remainingMoves > 0 :
-        print('----------------------------------------------------------------------------------------')
-        if deck.remainingCards == 0:
-            remainingMoves -= 1
-        print_standing(deck, table, players, numPlayers, current)
-        players[current].move(deck, table, players, numPlayers, current)
-        current = (current + 1) % numPlayers
+    parser = argparse.ArgumentParser(description = 'Plays the hanabi game')
+    parser.add_argument('iter', metavar = 'iter', type = int, nargs = '?', 
+            default = 1, help = 'Ha meg van adva, akkor ennyiszer fog \
+                    lefutni a program, és csak a végső pontszám lesz \
+                    kiírva minden iterációban')
 
-    print('végső pontszám: ' + str(table.getScore()))
+    args = parser.parse_args()
+    iter = args.iter
+    
+    global log
+    global log_without_newline
+
+    if iter == 1 :
+        def log(message) :
+            print(message)
+    else :
+        def log(message) :
+            pass
+
+
+    if iter == 1 :
+        def log_without_newline(message) :
+            sys.stdout.write(message)
+    else :
+        def log_without_newline(message) :
+            pass
+
+    for _ in range(iter) :
+        deck = Deck()
+        table = Table()
+        players = []
+        numPlayers = 5
+        numCards = 4
+        current = 0
+        for _ in range(numPlayers):
+            players.append(Player(numCards, deck.getHand(numCards)))
+
+        remainingMoves = numPlayers
+        while remainingMoves > 0 :
+            log('----------------------------------------------------------------------------------------')
+            if deck.remainingCards == 0:
+                remainingMoves -= 1
+            print_standing(deck, table, players, numPlayers, current)
+            players[current].move(deck, table, players, numPlayers, current)
+            current = (current + 1) % numPlayers
+
+        print('végső pontszám: ' + str(table.getScore()))
 
 class Card:
     color = 0
@@ -54,33 +84,33 @@ class Player:
     def move(self, deck, table, players, numPlayers, current):
 
         if self.existsKnownPlayable(table, deck) :
-            print(str(current + 1) + ' lerakja: ' + self.cards[self.knownPlayable(table, deck)].toString())
+            log(str(current + 1) + ' lerakja: ' + self.cards[self.knownPlayable(table, deck)].toString())
             self.playCard(deck, table, self.knownPlayable(table, deck))
             return
 
         if existNotKnownImportantCard(table, players, current, numPlayers):
-            print(str(current + 1) + ' segít')
+            log(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
             return
 
         if table.helps > 2 or (table.helps > 0 and deck.remainingCards < 3):
-            print(str(current + 1) + ' segít')
+            log(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
             return
 
         if self.existsKnownThrowable(table) :
-            print(str(current + 1) + ' eldobja: ' + self.cards[self.knownThrowable(table)].toString())
+            log(str(current + 1) + ' eldobja: ' + self.cards[self.knownThrowable(table)].toString())
             self.throwKnownCard(deck, table, self.knownThrowable(table))
             return
 
 
         if table.helps > 0:
-            print(str(current + 1) + ' segít')
+            log(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
         else:
-            print(str(current + 1) + ' dob')
+            log(str(current + 1) + ' dob')
             if self.existKnownNotNecessary(table, deck) :
-                print('nem fontosat: ' + self.cards[self.knownNotNecessary(table, deck)].toString())
+                log('nem fontosat: ' + self.cards[self.knownNotNecessary(table, deck)].toString())
                 self.throwKnownCard(deck, table, self.knownNotNecessary(table, deck))
                 return
             if self.numCards - self.knownCards > 0:
@@ -170,6 +200,8 @@ class Deck:
     discarded = []
     remainingCards = 0
     def __init__(self):
+        self.deck = []
+        self.discarded = []
         self.remainingCards = 50
         for i in range(5):
             self.deck.append([])
@@ -180,7 +212,7 @@ class Deck:
 
     def getCard(self):
         if self.remainingCards == 0:
-            print("Ez nem jött össze")
+            log("Ez nem jött össze")
             sys.exit(255)
 
         self.remainingCards -= 1
@@ -209,6 +241,7 @@ class Table:
     helps = 0
     def __init__(self):
         self.helps = 8
+        self.standing = []
         for _ in range(5):
             self.standing.append(0)
 
@@ -222,7 +255,7 @@ class Table:
         if self.isPlayable(card):
             self.standing[card.color] += 1
         else:
-            print("Ez nem jött össze")
+            log("Ez nem jött össze")
             sys.exit(255)
 
     def getScore(self):
@@ -266,18 +299,18 @@ def existsKnownPuttableCard(table, players):
 def print_standing(deck, table, players, numPlayers, current):
     for i in range(numPlayers):
         for j in range(players[i].knownCards):
-            sys.stdout.write(players[i].cards[j].toString())
-        sys.stdout.write('    ')
+            log_without_newline(players[i].cards[j].toString())
+        log_without_newline('    ')
         for j in range(players[i].knownCards, players[i].numCards):
-            sys.stdout.write(players[i].cards[j].toString())
-        sys.stdout.write('\n')
-    print
+            log_without_newline(players[i].cards[j].toString())
+        log('')
+    log('')
     for i in range(5):
-        sys.stdout.write(str(i) + "," + str(table.standing[i]) + ' ')
-    print
-    print 'megmaradó segítség: ' + str(table.helps)
-    print 'megmaradó lapok: ' + str(deck.remainingCards)
-    print
+        log_without_newline(str(i) + "," + str(table.standing[i]) + ' ')
+    log('')
+    log('megmaradó segítség: ' + str(table.helps))
+    log('megmaradó lapok: ' + str(deck.remainingCards))
+    log('')
 
 def cardNum(n):
     if n == 0:
