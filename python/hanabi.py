@@ -226,8 +226,19 @@ def existNotKnownImportantCard(table, players, current, numPlayers):
                         return True
     return False
 
-def existsKnownPuttableCard(table, players):
-    pass
+def existsKnownPlayableCard(table, players, numPlayers):
+    for i in range(numPlayers) :
+        for j in range(players[i].knownCards) :
+            if table.isPlayable(players[i].cards[j]) :
+                return True
+    return False
+
+def existsKnownThrowableCard(table, players, numPlayers):
+    for i in range(numPlayers) :
+        for j in range(players[i].knownCards) :
+            if table.isThrowable(players[i].cards[j]) :
+                return True
+    return False
 
 def print_standing(deck, table, players, numPlayers, current):
     for i in range(numPlayers):
