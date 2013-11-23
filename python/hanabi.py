@@ -324,7 +324,7 @@ def print_standing(table, players, numPlayers, current):
         log_without_newline(str(i) + "," + str(table.standing[i]) + ' ')
     log('')
     log('megmaradó segítség: ' + str(table.helps))
-    log('megmaradó lapok: ' + str(deck.remainingCards))
+    log('megmaradó lapok: ' + str(table.remainingCards))
     log('')
 
 def cardNum(n):
