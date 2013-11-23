@@ -35,22 +35,21 @@ def main(argv = None):
             pass
 
     for _ in range(iter) :
-        deck = Deck()
         table = Table()
         players = []
         numPlayers = 5
         numCards = 4
         current = 0
         for _ in range(numPlayers):
-            players.append(Player(numCards, deck.getHand(numCards)))
+            players.append(Player(numCards, table.getHand(numCards)))
 
         remainingMoves = numPlayers
         while remainingMoves > 0 :
             log('----------------------------------------------------------------------------------------')
-            if deck.remainingCards == 0:
+            if table.remainingCards == 0:
                 remainingMoves -= 1
-            print_standing(deck, table, players, numPlayers, current)
-            players[current].move(deck, table, players, numPlayers, current)
+            print_standing(table, players, numPlayers, current)
+            players[current].move(table, players, numPlayers, current)
             current = (current + 1) % numPlayers
 
         print('végső pontszám: ' + str(table.getScore()))
@@ -65,9 +64,6 @@ class Card:
     def toString(self):
         return str(self.color) + ',' + str(self.number) + " "
     
-    def isNecessary(self, table, deck):
-        return table.standing[self.color] <= self.number and deck.discarded[self.color][self.number] == cardNum(self.number) - 1
-
 class Player:
     cards = []
     numCards = 0
@@ -81,11 +77,11 @@ class Player:
         if self.knownCards < self.numCards:
             self.knownCards += 1
 
-    def move(self, deck, table, players, numPlayers, current):
+    def move(self, table, players, numPlayers, current):
 
-        if self.existsKnownPlayable(table, deck) :
-            log(str(current + 1) + ' lerakja: ' + self.cards[self.knownPlayable(table, deck)].toString())
-            self.playCard(deck, table, self.knownPlayable(table, deck))
+        if self.existsKnownPlayable(table) :
+            log(str(current + 1) + ' lerakja: ' + self.cards[self.knownPlayable(table)].toString())
+            self.playCard(table, self.knownPlayable(table))
             return
 
         if existNotKnownImportantCard(table, players, current, numPlayers):
@@ -93,14 +89,14 @@ class Player:
             self.helpOthers(table, players, numPlayers, current)
             return
 
-        if table.helps > 2 or (table.helps > 0 and deck.remainingCards < 3):
+        if table.helps > 2 or (table.helps > 0 and table.remainingCards < 3):
             log(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
             return
 
         if self.existsKnownThrowable(table) :
             log(str(current + 1) + ' eldobja: ' + self.cards[self.knownThrowable(table)].toString())
-            self.throwKnownCard(deck, table, self.knownThrowable(table))
+            self.throwKnownCard(table, self.knownThrowable(table))
             return
 
 
@@ -109,25 +105,25 @@ class Player:
             self.helpOthers(table, players, numPlayers, current)
         else:
             log(str(current + 1) + ' dob')
-            if self.existKnownNotNecessary(table, deck) :
-                log('nem fontosat: ' + self.cards[self.knownNotNecessary(table, deck)].toString())
-                self.throwKnownCard(deck, table, self.knownNotNecessary(table, deck))
+            if self.existKnownNotNecessary(table) :
+                log('nem fontosat: ' + self.cards[self.knownNotNecessary(table)].toString())
+                self.throwKnownCard(table, self.knownNotNecessary(table))
                 return
             if self.numCards - self.knownCards > 0:
-                self.throwNotKnownCard(deck, table)
+                self.throwNotKnownCard(table)
             else:
-                self.throwRandomKnownCard(deck, table)
+                self.throwRandomKnownCard(table)
 
-    def knownNotNecessary(self, table, deck):
+    def knownNotNecessary(self, table):
         for i in range(self.knownCards):
-            if not self.cards[i].isNecessary(table, deck):
+            if not table.isNecessary(self.cards[i]):
                 return i
         return -1
 
-    def existKnownNotNecessary(self, table, deck):
-        return self.knownNotNecessary(table, deck) != -1
+    def existKnownNotNecessary(self, table):
+        return self.knownNotNecessary(table) != -1
     
-    def knownPlayable(self, table, deck):
+    def knownPlayable(self, table):
         result = -1
         min_num = 5
         for i in range(self.knownCards):
@@ -136,15 +132,15 @@ class Player:
 
         for i in range(self.knownCards):
             if table.isPlayable(self.cards[i]) and self.cards[i].number == min_num:
-                if self.cards[i].isNecessary(table, deck):
+                if table.isNecessary(self.cards[i]):
                     return i
                 else:
                     result = i
 
         return result
 
-    def existsKnownPlayable(self, table, deck):
-        return self.knownPlayable(table, deck) != -1
+    def existsKnownPlayable(self, table):
+        return self.knownPlayable(table) != -1
 
     def knownThrowable(self, table):
         for i in range(self.knownCards):
@@ -156,49 +152,51 @@ class Player:
         return self.knownThrowable(table) != -1
 
     def helpOthers(self, table, players, numPlayers, current):
-        table.helps -= 1
+        table.useHelp()
         for i in range(numPlayers): 
             if i != current : 
                 players[i].help()
 
-    def throwRandomKnownCard(self, deck, table):
+    def throwRandomKnownCard(self, table):
         num = -1
         toThrow = 0
         for i in range(self.knownCards):
             if self.cards[i].number > num :
                 num = self.cards[i].number
                 toThrow = i
-        self.throwKnownCard(deck, table, toThrow)
+        self.throwKnownCard(table, toThrow)
 
-    def throwNotKnownCard(self, deck, table):
-        self.throwCard(deck, table, randint(self.knownCards, self.numCards - 1))
+    def throwNotKnownCard(self, table):
+        self.throwCard(table, randint(self.knownCards, self.numCards - 1))
 
-    def throwKnownCard(self, deck, table, num):
-        self.throwCard(deck, table, num)
+    def throwKnownCard(self, table, num):
+        self.throwCard(table, num)
         self.knownCards -= 1
 
-    def playCard(self, deck, table, num):
+    def playCard(self, table, num):
         table.playCard(self.cards[num])
-        self.loseCard(deck, num)
+        self.loseCard(table, num)
         self.knownCards -= 1
 
-    def throwCard(self, deck, table, num):
-        table.helps += 1
-        deck.throwCard(self.cards[num])
-        self.loseCard(deck, num)
+    def throwCard(self, table, num):
+        table.throwCard(self.cards[num])
+        self.loseCard(table, num)
 
-    def loseCard(self, deck, num):
+    def loseCard(self, table, num):
         for i in range(num, self.numCards - 1):
             self.cards[i] = self.cards[i + 1]
-        if deck.remainingCards > 0:
-            self.cards[self.numCards - 1] = deck.getCard()
+        if table.remainingCards > 0:
+            self.cards[self.numCards - 1] = table.getCard()
         else:
             self.numCards -= 1
 
-class Deck:
+class Table:
+    standing = []
+    helps = 0
     deck = []
     discarded = []
     remainingCards = 0
+
     def __init__(self):
         self.deck = []
         self.discarded = []
@@ -209,6 +207,11 @@ class Deck:
             for _ in range(5):
                 self.deck[i].append(0)
                 self.discarded[i].append(0)
+        self.helps = 8
+        self.standing = []
+        for _ in range(5):
+            self.standing.append(0)
+
 
     def getCard(self):
         if self.remainingCards == 0:
@@ -234,16 +237,13 @@ class Deck:
 
     def throwCard(self, card):
         self.discarded[card.color][card.number] += 1
+        self.helps += 1
 
-
-class Table:
-    standing = []
-    helps = 0
-    def __init__(self):
-        self.helps = 8
-        self.standing = []
-        for _ in range(5):
-            self.standing.append(0)
+    def useHelp(self) :
+        if self.helps == 0 :
+            log("Ez nem jött össze")
+            sys.exit(255)
+        self.helps -= 1
 
     def isPlayable(self, card):
         return self.standing[card.color] == card.number
@@ -257,6 +257,10 @@ class Table:
         else:
             log("Ez nem jött össze")
             sys.exit(255)
+
+    def isNecessary(self, card):
+        return (self.standing[self.color] <= card.number and 
+                self.discarded[card.color][card.number] == cardNum(card.number) - 1)
 
     def getScore(self):
         score = 0
@@ -307,7 +311,7 @@ def existsKnownThrowableCard(table, players, numPlayers):
                 return True
     return False
 
-def print_standing(deck, table, players, numPlayers, current):
+def print_standing(table, players, numPlayers, current):
     for i in range(numPlayers):
         for j in range(players[i].knownCards):
             log_without_newline(players[i].cards[j].toString())
