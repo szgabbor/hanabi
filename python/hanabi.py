@@ -84,12 +84,8 @@ class Player:
             self.playCard(table, self.knownPlayable(table))
             return
 
-        if existNotKnownImportantCard(table, players, current, numPlayers):
-            log(str(current + 1) + ' segít')
-            self.helpOthers(table, players, numPlayers, current)
-            return
-
-        if table.helps > 2 or (table.helps > 0 and table.remainingCards < 3):
+        if table.helps > 2 or (table.helps > 0 and (table.remainingCards < 3 or
+                existNotKnownImportantCard(table, players, current, numPlayers))):
             log(str(current + 1) + ' segít')
             self.helpOthers(table, players, numPlayers, current)
             return
@@ -215,7 +211,7 @@ class Table:
 
     def getCard(self):
         if self.remainingCards == 0:
-            log("Ez nem jött össze")
+            log("Nem maradt lap a pakliban")
             sys.exit(255)
 
         self.remainingCards -= 1
@@ -241,7 +237,7 @@ class Table:
 
     def useHelp(self) :
         if self.helps == 0 :
-            log("Ez nem jött össze")
+            log("Nem maradt segítség")
             sys.exit(255)
         self.helps -= 1
 
@@ -255,11 +251,11 @@ class Table:
         if self.isPlayable(card):
             self.standing[card.color] += 1
         else:
-            log("Ez nem jött össze")
+            log("Ez nem jött össze3")
             sys.exit(255)
 
     def isNecessary(self, card):
-        return (self.standing[self.color] <= card.number and 
+        return (self.standing[card.color] <= card.number and 
                 self.discarded[card.color][card.number] == cardNum(card.number) - 1)
 
     def getScore(self):
